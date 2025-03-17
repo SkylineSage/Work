@@ -32,19 +32,13 @@ jobs:
       - name: Check .app Structure
         run: ls -R demo/dist/DollTowerGame.app/
 
-      - name: Install create-dmg
-        run: npm install -g create-dmg
-
-      - name: Create .dmg Installer
+      - name: Create .tar Installer
         run: |
           pwd
-          create-dmg --overwrite --dmg-title="DollTowerGame" \
-            --app-drop-link \
-            /Users/runner/work/Work/Work/demo/dist/DollTowerGame.app \
-            /Users/runner/work/Work/Work/demo/dist/
+          tar -czf demo/dist/DollTowerGame.tar.gz -C demo/dist DollTowerGame.app  # 创建 .tar 压缩包
 
-      - name: Upload DMG
+      - name: Upload TAR
         uses: actions/upload-artifact@v4
         with:
-          name: macos-dmg
-          path: demo/dist/DollTowerGame.dmg  # 上传 .dmg 安装包
+          name: macos-tar
+          path: demo/dist/DollTowerGame.tar.gz  # 上传 .tar 安装包
