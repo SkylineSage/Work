@@ -40,8 +40,8 @@ jobs:
           pwd
           create-dmg --overwrite --dmg-title="DollTowerGame" \
             --app-drop-link \
-            demo/dist/DollTowerGame.app \
-            demo/dist/
+            /Users/runner/work/Work/Work/demo/dist/DollTowerGame.app \
+            /Users/runner/work/Work/Work/demo/dist/
 
       - name: Upload DMG
         uses: actions/upload-artifact@v4
