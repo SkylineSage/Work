@@ -29,6 +29,8 @@ jobs:
 
       - name: Create .dmg Installer
         run: |
+          pwd
+          ls -la ./
           create-dmg \
             --overwrite \
             --dmg-title="DollTowerGame" \
