@@ -1,0 +1,26 @@
+name: Build macOS Executable
+on: [push]
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Dependency Packages
+        run: pip install -r requirements.txt
+
+      - name: Build Executable
+        run: |
+          cd demo
+          pyinstaller --onefile DollTowerGame.py
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos-executable
+          path: demo/dist/DollTowerGame
