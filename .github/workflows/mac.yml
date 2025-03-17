@@ -21,7 +21,7 @@ jobs:
           ls -la dist/  # 检查构建结果
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: macos-executable
           path: demo/dist/
