@@ -30,15 +30,14 @@ jobs:
       - name: Create .dmg Installer
         run: |
           pwd
-          ls -la ./
           ls -la ./demo
-          cd demo
+          ls -la ./demo/dist
           create-dmg \
             --overwrite \
             --dmg-title="DollTowerGame" \
             --app-drop-link \
-            ./dist/DollTowerGame.app \
-            ./dist/
+            "$(pwd)/demo/dist/DollTowerGame.app" \
+            "$(pwd)/demo/dist/"
 
       - name: Upload DMG
         uses: actions/upload-artifact@v4
