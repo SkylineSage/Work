@@ -1,27 +1,31 @@
-name: Build macOS Executable
-on: [push]
+name: Build macOS App
+
+on: [push]  # 触发条件：每次 push 代码
+
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-latest  # 运行环境：macOS
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4  # 拉取代码
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.10'  # 使用 Python 3.10
 
-      - name: Install Dependency Packages
-        run: pip install -r requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt  # 安装 Python 依赖
 
-      - name: Build Executable
+      - name: Build macOS App
         run: |
           cd demo
-          pyinstaller --onefile DollTowerGame.py
-          ls -la dist/  # 检查构建结果
+          pyinstaller --onefile --windowed --name="DollTowerGame" DollTowerGame.py  # 生成 .app 应用
+          ls -la dist/  # 确保生成的 .app 文件夹
 
-      - name: Upload Artifact
+      - name: Upload macOS App
         uses: actions/upload-artifact@v4
         with:
-          name: macos-executable
-          path: demo/dist/
+          name: macos-app
+          path: demo/dist/DollTowerGame.app  # 上传 .app 文件夹
