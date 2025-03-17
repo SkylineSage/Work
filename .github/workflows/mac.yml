@@ -1,4 +1,4 @@
-name: Build macOS App
+name: Build macOS App and DMG
 
 on: [push]  # 触发条件：每次 push 代码
 
@@ -24,8 +24,20 @@ jobs:
           pyinstaller --onefile --windowed --name="DollTowerGame" DollTowerGame.py  # 生成 .app 应用
           ls -la dist/  # 确保生成的 .app 文件夹
 
-      - name: Upload macOS App
+      - name: Install create-dmg
+        run: npm install -g create-dmg  # 安装 create-dmg 工具
+
+      - name: Create .dmg Installer
+        run: |
+          create-dmg \
+            --overwrite \
+            --dmg-title="DollTowerGame" \
+            --app-drop-link \
+            demo/dist/DollTowerGame.app \
+            demo/dist/
+
+      - name: Upload DMG
         uses: actions/upload-artifact@v4
         with:
-          name: macos-app
-          path: demo/dist/DollTowerGame.app  # 上传 .app 文件夹
+          name: macos-dmg
+          path: demo/dist/DollTowerGame.dmg  # 上传 .dmg 安装包
