@@ -24,17 +24,20 @@ jobs:
           pyinstaller --onefile --windowed --name="DollTowerGame" DollTowerGame.py  # 生成 .app 应用
           ls -la dist/  # 确保生成的 .app 文件夹
 
+      - name: Fix .app Permissions
+        run: |
+          chmod +x demo/dist/DollTowerGame.app/Contents/MacOS/DollTowerGame
+          xattr -cr demo/dist/DollTowerGame.app
+
+      - name: Check .app Structure
+        run: ls -R demo/dist/DollTowerGame.app/
+
       - name: Install create-dmg
-        run: npm install -g create-dmg  # 安装 create-dmg 工具
+        run: npm install -g create-dmg
 
       - name: Create .dmg Installer
         run: |
-          pwd
-          ls -la ./demo
-          ls -la ./demo/dist
-          create-dmg \
-            --overwrite \
-            --dmg-title="DollTowerGame" \
+          create-dmg --overwrite --dmg-title="DollTowerGame" \
             --app-drop-link \
             "$(pwd)/demo/dist/DollTowerGame.app" \
             "$(pwd)/demo/dist/"
