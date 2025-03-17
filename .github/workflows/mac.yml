@@ -31,6 +31,7 @@ jobs:
         run: |
           pwd
           ls -la ./
+          ls -la ./demo
           create-dmg \
             --overwrite \
             --dmg-title="DollTowerGame" \
