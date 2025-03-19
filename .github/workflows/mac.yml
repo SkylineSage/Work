@@ -1,0 +1,44 @@
+name: Build macOS App and DMG
+
+on: [push]  # 触发条件：每次 push 代码
+
+jobs:
+  build:
+    runs-on: macos-latest  # 运行环境：macOS
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4  # 拉取代码
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'  # 使用 Python 3.10
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt  # 安装 Python 依赖
+
+      - name: Build macOS App
+        run: |
+          cd demo
+          pyinstaller --onefile --windowed --name="DollTowerGame" DollTowerGame.py  # 生成 .app 应用
+          ls -la dist/  # 确保生成的 .app 文件夹
+
+      - name: Fix .app Permissions
+        run: |
+          chmod +x demo/dist/DollTowerGame.app/Contents/MacOS/DollTowerGame
+          xattr -cr demo/dist/DollTowerGame.app
+
+      - name: Check .app Structure
+        run: ls -R demo/dist/DollTowerGame.app/
+
+      - name: Create .tar Installer
+        run: |
+          pwd
+          tar -czf demo/dist/DollTowerGame.tar.gz -C demo/dist DollTowerGame.app  # 创建 .tar 压缩包
+
+      - name: Upload TAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-tar
+          path: demo/dist/DollTowerGame.tar.gz  # 上传 .tar 安装包
