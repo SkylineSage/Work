@@ -8,7 +8,7 @@ from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import PatternFill
 
-DEFAULT_COLORS = ["红", "橙", "黄", "绿", "蓝", "紫", "粉", "黑", "白", "棕", "灰"]
+DEFAULT_COLORS = ["红", "橙", "黄", "绿", "蓝", "紫", "粉", "黑", "白", "棕", "灰", "金", "银"]
 
 
 def parse_doll_config(config_str):
@@ -44,11 +44,13 @@ def parse_doll_config(config_str):
 class GameState:
     """游戏状态管理类"""
 
-    def __init__(self, game_id, population, ratios, initial_draw, wish_colors):
+    def __init__(self, game_id, population, ratios, initial_draw, wish_colors, milk_counts):
         self.game_id = game_id
         self.population = population
         self.ratios = ratios
         self.wish_colors = wish_colors  # 许愿色改为列表
+        self.milk_counts = milk_counts  # 新增奶次数
+        self.milk_used = 0  # 已使用的奶次数
 
         # 初始化状态
         self.tower = [None] * 9  # 9层宝塔
@@ -215,6 +217,34 @@ class GameState:
         colors = [d["color"] for d in self.tower if d]
         return len(colors) == len(set(colors))
 
+    def apply_milk(self):
+        """应用奶操作"""
+        if self.milk_used >= len(self.milk_counts):
+            return False
+
+        milk_count = self.milk_counts[self.milk_used]
+        if milk_count <= 0:
+            return False
+
+        # 从population中随机抽取娃娃
+        new_dolls = random.choices(self.population, weights=self.ratios, k=milk_count)
+
+        # 放置到宝塔
+        filled = 0
+        for i in range(9):
+            if self.tower[i] is None:
+                self.tower[i] = {"color": new_dolls[filled], "wish_triggered": False}
+                filled += 1
+                if filled >= milk_count:
+                    break
+
+        # 剩余的放入小筐
+        self.small_basket.extend(new_dolls[filled:])
+
+        self.milk_used += 1
+        self.log_event("奶操作", f"应用第{self.milk_used}次奶，补充{milk_count}个娃娃")
+        return True
+
 
 def simulate_game(game_id, config, max_rounds=100):
     """单局游戏模拟"""
@@ -223,7 +253,8 @@ def simulate_game(game_id, config, max_rounds=100):
         population=config["population"],
         ratios=config["ratios"],
         initial_draw=config["initial_draw"],
-        wish_colors=config["wish_colors"]
+        wish_colors=config["wish_colors"],
+        milk_counts=config["milk_counts"]
     )
 
     while state.round_number < max_rounds:
@@ -240,6 +271,10 @@ def simulate_game(game_id, config, max_rounds=100):
 
         # 检查终止条件
         if state.should_terminate():
+            # 尝试应用奶操作
+            if state.apply_milk():
+                continue
+
             # 游戏结束时清空宝塔
             remaining = sum(1 for d in state.tower if d)
             if remaining > 0:
@@ -269,18 +304,20 @@ def simulate_game(game_id, config, max_rounds=100):
 
 def run_simulation(doll_config_red, doll_config_orange, doll_config_yellow, doll_config_green, doll_config_blue,
                    doll_config_purple, doll_config_pink, doll_config_black, doll_config_white, doll_config_brown,
-                   doll_config_gray, wish_colors, initial_draw, doll_exchange, total_games, max_rounds):
+                   doll_config_gray, doll_config_gold, doll_config_silver, wish_colors, initial_draw, doll_exchange,
+                   total_games, max_rounds, milk1, milk2, milk3):
     """批量运行模拟（支持多选许愿色）"""
     try:
         # 将各个颜色的数值拼接成字符串，传递给 parse_doll_config
-        doll_config = f"{doll_config_red},{doll_config_orange},{doll_config_yellow},{doll_config_green},{doll_config_blue},{doll_config_purple},{doll_config_pink},{doll_config_black},{doll_config_white},{doll_config_brown},{doll_config_gray}"
+        doll_config = f"{doll_config_red},{doll_config_orange},{doll_config_yellow},{doll_config_green},{doll_config_blue},{doll_config_purple},{doll_config_pink},{doll_config_black},{doll_config_white},{doll_config_brown},{doll_config_gray},{doll_config_gold},{doll_config_silver}"
         population, ratios = parse_doll_config(doll_config)
         config = {
             "population": population,
             "ratios": ratios,
             "initial_draw": int(initial_draw),
             "wish_colors": wish_colors,
-            "doll_exchange": int(doll_exchange)
+            "doll_exchange": int(doll_exchange),
+            "milk_counts": [int(milk1), int(milk2), int(milk3)]  # 新增奶参数
         }
 
         # 检查许愿色是否在娃娃颜色列表中
@@ -305,14 +342,22 @@ def run_simulation(doll_config_red, doll_config_orange, doll_config_yellow, doll
             "游戏ID", "收获娃娃", "大礼包数", "总回合数"
         ])
 
+        # 新增参数表
+        df_params = pd.DataFrame({
+            "参数": ["红色", "橙色", "黄色", "绿色", "蓝色", "紫色", "粉色", "黑色", "白色", "棕色", "灰色", "金色",
+                     "银色", "许愿色", "初始抽取", "娃娃兑换率", "总局数", "第一次奶", "第二次奶", "第三次奶"],
+            "值": [doll_config_red, doll_config_orange, doll_config_yellow, doll_config_green, doll_config_blue,
+                   doll_config_purple, doll_config_pink, doll_config_black, doll_config_white, doll_config_brown,
+                   doll_config_gray, doll_config_gold, doll_config_silver, ", ".join(wish_colors), initial_draw, doll_exchange, total_games,
+                   milk1, milk2, milk3]
+        })
+
         # 将数据保存为临时文件
         with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-            # 使用openpyxl引擎
             with pd.ExcelWriter(tmp.name, engine="openpyxl") as writer:
-                # 写详细日志
                 df_logs.to_excel(writer, sheet_name="详细日志", index=False)
-                # 写汇总结果
                 df_results.to_excel(writer, sheet_name="汇总结果", index=False)
+                df_params.to_excel(writer, sheet_name="参数设置", index=False)  # 新增参数表
 
             # 加载Excel文件以设置样式
             wb = load_workbook(tmp.name)
@@ -328,7 +373,7 @@ def run_simulation(doll_config_red, doll_config_orange, doll_config_yellow, doll
                 if phase == "新一轮放娃":
                     # 设置整行背景颜色为浅灰色
                     for col in range(1, len(df_logs.columns) + 1):
-                        ws.cell(row=row, column=col).fill = PatternFill(start_color='F5F5DC', end_color='F5F5DC',
+                        ws.cell(row=row, column=col).fill = PatternFill(start_color='EDEDED', end_color='EDEDED',
                                                                         fill_type='solid')
                 elif phase == "初始化":
                     # 设置整行背景颜色为中灰色
@@ -366,10 +411,16 @@ with gr.Blocks(title="娃娃宝塔模拟器") as demo:
                 doll_config_white = gr.Number(label="白色", value=100, minimum=0, step=1, min_width=80)
                 doll_config_brown = gr.Number(label="棕色", value=100, minimum=0, step=1, min_width=80)
                 doll_config_gray = gr.Number(label="灰色", value=100, minimum=0, step=1, min_width=80)
+                doll_config_gold = gr.Number(label="金色", value=100, minimum=0, step=1, min_width=80)
+                doll_config_silver = gr.Number(label="银色", value=100, minimum=0, step=1, min_width=80)
             wish_colors = gr.CheckboxGroup(
                 label="选择许愿色（可多选）",
                 choices=DEFAULT_COLORS
             )
+            with gr.Row():
+                milk1 = gr.Number(label="第一次奶", value=0, minimum=0, step=1, min_width=80)
+                milk2 = gr.Number(label="第二次奶", value=0, minimum=0, step=1, min_width=80)
+                milk3 = gr.Number(label="第三次奶", value=0, minimum=0, step=1, min_width=80)
             initial_draw = gr.Number(
                 label="初始抽取数量",
                 value=9,
@@ -410,7 +461,8 @@ with gr.Blocks(title="娃娃宝塔模拟器") as demo:
         run_simulation,
         inputs=[doll_config_red, doll_config_orange, doll_config_yellow, doll_config_green, doll_config_blue,
                 doll_config_purple, doll_config_pink, doll_config_black, doll_config_white, doll_config_brown,
-                doll_config_gray, wish_colors, initial_draw, doll_exchange, total_games, max_rounds],
+                doll_config_gray, doll_config_gold, doll_config_silver, wish_colors, initial_draw, doll_exchange,
+                total_games, max_rounds, milk1, milk2, milk3],
         outputs=[file_output, result_table]
     )
 
